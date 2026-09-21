@@ -38,6 +38,7 @@
         .btn-navy:hover { background: var(--navy-mid); color: white; }
         .btn-navy:disabled { background: #8899BB; color: white; }
         #uploadPreview { max-width: 100%; max-height: 200px; border-radius: 8px; display: none; margin-top: 10px; }
+        .ai-helper { background: linear-gradient(135deg, #eef6ff, #fffaf0); border: 1px solid #cbdced; border-radius: 12px; }
         footer { background: var(--navy); color: rgba(255,255,255,0.6); }
     </style>
 </head>
@@ -205,6 +206,15 @@
 
                             <!-- รายละเอียด -->
                             <div class="section-title mt-4">รายละเอียด</div>
+                            <div class="ai-helper p-3 mb-3">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-stars text-warning fs-5"></i>
+                                    <strong class="text-navy">ให้ AI ช่วยจัดทำรายละเอียด</strong>
+                                </div>
+                                <p class="small text-muted mb-2">พิมพ์อาการที่พบและแนบรูปภาพ แล้วให้ AI ช่วยแนะนำหมวดและเรียบเรียงข้อมูลให้ ตรวจสอบผลลัพธ์ก่อนส่งทุกครั้ง</p>
+                                <button type="button" class="btn btn-sm btn-navy" id="aiRepairBtn"><i class="bi bi-magic me-1"></i>ให้ AI วิเคราะห์</button>
+                                <div class="small mt-2 d-none" id="aiRepairResult"></div>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label">รายละเอียดอาการเสีย <span class="text-danger">*</span></label>
                                 <textarea class="form-control" id="repairDescription" rows="4" placeholder="อธิบายอาการเสียให้ละเอียด เช่น เกิดเมื่อไหร่ ที่ไหนในห้อง รุนแรงแค่ไหน" required></textarea>
@@ -282,6 +292,60 @@
                     preview.style.display = 'block'
                 }
                 reader.readAsDataURL(file)
+            }
+        })
+
+        document.getElementById('aiRepairBtn').addEventListener('click', async function() {
+            const button = this
+            const description = document.getElementById('repairDescription').value.trim()
+            const file = document.getElementById('repairPhoto').files[0]
+            const result = document.getElementById('aiRepairResult')
+            if (!description) {
+                alert('กรุณาพิมพ์อาการเสียก่อนให้ AI วิเคราะห์')
+                document.getElementById('repairDescription').focus()
+                return
+            }
+            if (!file) {
+                alert('กรุณาแนบรูปภาพปัญหาก่อนให้ AI วิเคราะห์')
+                document.getElementById('repairPhoto').focus()
+                return
+            }
+            if (file.size > 4 * 1024 * 1024) {
+                alert('รูปภาพต้องมีขนาดไม่เกิน 4 MB')
+                return
+            }
+            button.disabled = true
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>กำลังวิเคราะห์...'
+            result.classList.add('d-none')
+            try {
+                const image = file ? await new Promise((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onload = () => resolve(reader.result)
+                    reader.onerror = () => reject(new Error('อ่านรูปภาพไม่สำเร็จ'))
+                    reader.readAsDataURL(file)
+                }) : null
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `****** },
+                    body: JSON.stringify({ mode: 'repair', message: description, image })
+                })
+                const data = await response.json()
+                if (!response.ok || !data.repair) throw new Error(data.error || 'AI วิเคราะห์ไม่สำเร็จ')
+                const repair = data.repair
+                const categoryCard = [...document.querySelectorAll('.cat-card')].find(card => card.textContent.includes(repair.category))
+                if (categoryCard) selectCategory(repair.category, categoryCard)
+                const subOption = [...document.querySelectorAll(`#sub-${repair.category} .sub-option`)].find(option => option.textContent.trim().includes(repair.sub_category))
+                if (subOption) selectSub(subOption)
+                if (repair.description) document.getElementById('repairDescription').value = repair.description
+                if (repair.location_detail && !document.getElementById('locationDetail').value) document.getElementById('locationDetail').value = repair.location_detail
+                const missing = Array.isArray(repair.missing) && repair.missing.length ? ` ควรระบุเพิ่ม: ${repair.missing.join(', ')}` : ''
+                result.textContent = `AI แนะนำ: ${repair.title || repair.category || 'ตรวจสอบข้อมูลแล้ว'}${missing}`
+                result.classList.remove('d-none')
+            } catch (error) {
+                alert(error.message)
+            } finally {
+                button.disabled = false
+                button.innerHTML = '<i class="bi bi-magic me-1"></i>ให้ AI วิเคราะห์'
             }
         })
 

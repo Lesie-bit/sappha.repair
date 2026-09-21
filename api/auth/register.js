@@ -1,6 +1,7 @@
 import { connectDB } from '../../lib/db.js'
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
+import nodemailer from 'nodemailer'
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000
 
@@ -24,7 +25,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' })
   }
 
-  // ✅ เช็คโดเมนอีเมล
   if (!email.endsWith('@sappha.ac.th')) {
     return res.status(403).json({ error: 'สมัครได้เฉพาะอีเมล @sappha.ac.th เท่านั้น' })
   }
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' })
   }
 
-  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     return res.status(503).json({ error: 'ระบบส่งอีเมลยังไม่ได้ตั้งค่า กรุณาติดต่อผู้ดูแลระบบ' })
   }
 
@@ -60,25 +60,28 @@ export default async function handler(req, res) {
     { upsert: true }
   )
 
-  const emailResponse = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM,
-      to: [email],
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: process.env.SMTP_SECURE !== 'false',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  })
+
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: email,
       subject: 'รหัส OTP ยืนยันการสมัครสมาชิก',
       text: `รหัส OTP สำหรับยืนยันการสมัครสมาชิกคือ ${otp}\nรหัสนี้ใช้ได้ภายใน 10 นาที`,
       html: `<p>รหัส OTP สำหรับยืนยันการสมัครสมาชิกคือ</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px">${otp}</p><p>รหัสนี้ใช้ได้ภายใน 10 นาที</p>`
     })
-  })
-
-  if (!emailResponse.ok) {
+  } catch (error) {
     await pending.deleteOne({ email })
-    console.error('Resend API error', await emailResponse.text())
-    return res.status(502).json({ error: 'ส่ง OTP ไม่สำเร็จ กรุณาตรวจสอบการตั้งค่าอีเมล' })
+    console.error('SMTP email error', error)
+    return res.status(502).json({ error: 'ส่ง OTP ไม่สำเร็จ กรุณาตรวจสอบการตั้งค่า Gmail SMTP' })
   }
 
   return res.status(200).json({ success: true, message: 'ส่งรหัส OTP ไปยังอีเมลแล้ว' })

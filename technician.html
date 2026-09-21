@@ -253,9 +253,11 @@
         function filterStatus(status, btn) {
             selectedStatus = status
             document.querySelectorAll('.status-filter').forEach(b => {
-                b.className = 'btn btn-outline-secondary filter-btn'
+                b.classList.remove('btn-navy', 'active')
+                b.classList.add('btn-outline-secondary')
             })
-            btn.className = 'btn btn-navy filter-btn'
+            btn.classList.remove('btn-outline-secondary')
+            btn.classList.add('btn-navy', 'active')
             applyFilters()
         }
 

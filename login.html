@@ -61,6 +61,8 @@
             box-shadow: 0 0 0 3px rgba(74,144,196,0.15);
         }
         .input-group-text { background: var(--navy-pale); border-color: #D1DCE8; color: var(--navy); }
+        .password-toggle { border-color: #D1DCE8; color: var(--navy); background: white; }
+        .password-toggle:hover { color: var(--navy-mid); background: var(--navy-pale); }
         .btn-navy {
             background: var(--navy);
             color: white;
@@ -101,6 +103,7 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
                             <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+                            <button class="btn password-toggle" type="button" data-target="password" aria-label="แสดงรหัสผ่าน"><i class="bi bi-eye"></i></button>
                         </div>
                     </div>
                     <div class="d-grid mb-3">
@@ -109,18 +112,133 @@
                         </button>
                     </div>
                     <div class="text-center">
+                        <button type="button" class="btn btn-link btn-sm text-decoration-none mb-2" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                            <i class="bi bi-key me-1"></i>ลืมรหัสผ่าน?
+                        </button>
+                        <br>
                         <small class="text-muted">ยังไม่มีบัญชี? <a href="register.html">สมัครสมาชิก</a></small>
                     </div>
                 </form>
             </div>
         </div>
     </main>
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="forgotPasswordTitle"><i class="bi bi-shield-lock me-2"></i>ตั้งรหัสผ่านใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small" id="forgotHint">กรอกอีเมลโรงเรียน ระบบจะส่ง OTP ให้คุณ</p>
+                    <form id="forgotPasswordForm">
+                        <div id="forgotEmailStep">
+                            <label class="form-label fw-semibold small">อีเมลโรงเรียน</label>
+                            <input type="email" class="form-control" id="forgotEmail" placeholder="ชื่อ@sappha.ac.th" required>
+                        </div>
+                        <div id="resetStep" class="d-none">
+                            <label class="form-label fw-semibold small">รหัส OTP</label>
+                            <input type="text" class="form-control text-center fs-4 mb-3" id="resetOtp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="กรอกรหัส 6 หลัก">
+                            <label class="form-label fw-semibold small">รหัสผ่านใหม่</label>
+                            <div class="input-group mb-2">
+                                <input type="password" class="form-control" id="newPassword" minlength="6" placeholder="อย่างน้อย 6 ตัวอักษร">
+                                <button class="btn password-toggle" type="button" data-target="newPassword" aria-label="แสดงรหัสผ่าน"><i class="bi bi-eye"></i></button>
+                            </div>
+                            <label class="form-label fw-semibold small">ยืนยันรหัสผ่านใหม่</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="confirmNewPassword" minlength="6" placeholder="กรอกรหัสผ่านอีกครั้ง">
+                                <button class="btn password-toggle" type="button" data-target="confirmNewPassword" aria-label="แสดงรหัสผ่าน"><i class="bi bi-eye"></i></button>
+                            </div>
+                            <small class="text-danger d-none" id="resetPasswordError">รหัสผ่านไม่ตรงกัน</small>
+                        </div>
+                        <button type="submit" class="btn btn-navy w-100 mt-4" id="forgotSubmitBtn">ส่ง OTP</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     <footer class="py-3 text-center">
         <small>© 2026 ระบบแจ้งซ่อมบำรุง โรงเรียนสรรพวิทยาคม | พัฒนาโดยนักเรียน ม.6</small>
     </footer>
     <script src="auth-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        document.querySelectorAll('.password-toggle').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                const input = document.getElementById(toggle.dataset.target)
+                const icon = toggle.querySelector('i')
+                const isVisible = input.type === 'text'
+                input.type = isVisible ? 'password' : 'text'
+                icon.className = isVisible ? 'bi bi-eye' : 'bi bi-eye-slash'
+                toggle.setAttribute('aria-label', isVisible ? 'แสดงรหัสผ่าน' : 'ซ่อนรหัสผ่าน')
+            })
+        })
+
+        let otpSent = false
+        document.getElementById('forgotPasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault()
+            const email = document.getElementById('forgotEmail').value.trim().toLowerCase()
+            const btn = document.getElementById('forgotSubmitBtn')
+            const newPassword = document.getElementById('newPassword')
+            const confirmNewPassword = document.getElementById('confirmNewPassword')
+            if (otpSent && newPassword.value !== confirmNewPassword.value) {
+                document.getElementById('resetPasswordError').classList.remove('d-none')
+                confirmNewPassword.focus()
+                return
+            }
+            document.getElementById('resetPasswordError').classList.add('d-none')
+            btn.disabled = true
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังดำเนินการ...'
+            const endpoint = otpSent ? '/api/auth/reset-password' : '/api/auth/forgot-password'
+            const body = otpSent
+                ? { email, otp: document.getElementById('resetOtp').value.trim(), password: newPassword.value }
+                : { email }
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                })
+                const data = await response.json()
+                if (!response.ok || !data.success) throw new Error(data.error || 'ดำเนินการไม่สำเร็จ')
+                if (otpSent) {
+                    alert('ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบ')
+                    window.location.reload()
+                    return
+                }
+                otpSent = true
+                document.getElementById('forgotEmailStep').classList.add('d-none')
+                document.getElementById('resetStep').classList.remove('d-none')
+                document.getElementById('forgotEmail').required = false
+                document.getElementById('resetOtp').required = true
+                newPassword.required = true
+                confirmNewPassword.required = true
+                document.getElementById('resetOtp').focus()
+                document.getElementById('forgotHint').textContent = 'กรอกรหัส OTP ที่ส่งไปยังอีเมลของคุณ รหัสมีอายุ 10 นาที'
+                btn.disabled = false
+                btn.innerHTML = 'ตั้งรหัสผ่านใหม่'
+            } catch (error) {
+                alert(error.message)
+                btn.disabled = false
+                btn.innerHTML = otpSent ? 'ตั้งรหัสผ่านใหม่' : 'ส่ง OTP'
+            }
+        })
+
+        document.getElementById('forgotPasswordModal').addEventListener('hidden.bs.modal', function() {
+            otpSent = false
+            document.getElementById('forgotPasswordForm').reset()
+            document.getElementById('forgotEmailStep').classList.remove('d-none')
+            document.getElementById('resetStep').classList.add('d-none')
+            document.getElementById('forgotEmail').required = true
+            document.getElementById('resetOtp').required = false
+            document.getElementById('newPassword').required = false
+            document.getElementById('confirmNewPassword').required = false
+            document.getElementById('forgotHint').textContent = 'กรอกอีเมลโรงเรียน ระบบจะส่ง OTP ให้คุณ'
+            const btn = document.getElementById('forgotSubmitBtn')
+            btn.disabled = false
+            btn.innerHTML = 'ส่ง OTP'
+        })
+
         document.querySelector('form').addEventListener('submit', async function(e) {
             e.preventDefault()
             const email = document.getElementById('email').value

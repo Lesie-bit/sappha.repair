@@ -99,10 +99,17 @@
         <!-- Filter -->
         <div class="toolbar d-flex align-items-center gap-2 mb-4 flex-wrap">
             <span class="small fw-bold text-muted me-1"><i class="bi bi-funnel me-1"></i>แสดงงาน</span>
-            <button class="btn btn-navy filter-btn" onclick="filterStatus('all', this)">ทั้งหมด</button>
-            <button class="btn btn-outline-secondary filter-btn" onclick="filterStatus('pending', this)">รอรับเรื่อง</button>
-            <button class="btn btn-outline-secondary filter-btn" onclick="filterStatus('in_progress', this)">กำลังดำเนินการ</button>
-            <button class="btn btn-outline-secondary filter-btn" onclick="filterStatus('done', this)">เสร็จแล้ว</button>
+            <button class="btn btn-navy filter-btn status-filter active" data-status="all" onclick="filterStatus('all', this)">ทั้งหมด</button>
+            <button class="btn btn-outline-secondary filter-btn status-filter" data-status="pending" onclick="filterStatus('pending', this)">รอรับเรื่อง</button>
+            <button class="btn btn-outline-secondary filter-btn status-filter" data-status="in_progress" onclick="filterStatus('in_progress', this)">กำลังดำเนินการ</button>
+            <button class="btn btn-outline-secondary filter-btn status-filter" data-status="done" onclick="filterStatus('done', this)">เสร็จแล้ว</button>
+            <select class="form-select form-select-sm ms-md-auto" id="categoryFilter" onchange="filterCategory(this.value)" style="max-width:210px" aria-label="กรองหมวดปัญหา">
+                <option value="all">ทุกหมวดปัญหา</option>
+                <option value="ไฟฟ้า">ไฟฟ้า</option>
+                <option value="ประปา">ประปา</option>
+                <option value="อาคาร">อาคาร/สิ่งก่อสร้าง</option>
+                <option value="คอมพิวเตอร์">คอมพิวเตอร์/IT</option>
+            </select>
         </div>
 
         <div id="loadingMsg" class="text-center py-5 text-muted">
@@ -169,6 +176,8 @@
         const token = localStorage.getItem('token')
         let allRepairs = []
         let currentId = null
+        let selectedStatus = 'all'
+        let selectedCategory = 'all'
 
         document.getElementById('techName').textContent = user?.name || ''
 
@@ -233,13 +242,26 @@
             }).join('')
         }
 
+        function applyFilters() {
+            const filtered = allRepairs.filter(r =>
+                (selectedStatus === 'all' || r.status === selectedStatus) &&
+                (selectedCategory === 'all' || r.category === selectedCategory)
+            )
+            renderList(filtered)
+        }
+
         function filterStatus(status, btn) {
-            document.querySelectorAll('.filter-btn').forEach(b => {
+            selectedStatus = status
+            document.querySelectorAll('.status-filter').forEach(b => {
                 b.className = 'btn btn-outline-secondary filter-btn'
             })
             btn.className = 'btn btn-navy filter-btn'
-            const filtered = status === 'all' ? allRepairs : allRepairs.filter(r => r.status === status)
-            renderList(filtered)
+            applyFilters()
+        }
+
+        function filterCategory(category) {
+            selectedCategory = category
+            applyFilters()
         }
 
         function showImg(url) {

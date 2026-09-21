@@ -26,6 +26,7 @@ export default async function handler(req, res) {
         const {
             title,
             category,
+            sub_category,
             location_building,
             location_detail,
             description,
@@ -34,8 +35,11 @@ export default async function handler(req, res) {
         } = req.body
 
         // เช็คข้อมูลที่จำเป็น
-        if (!title || !location_building || !description) {
+        if (!title || !location_building || !description || !contact_number) {
             return res.status(400).json({ error: 'กรอกข้อมูลให้ครบ' })
+        }
+        if (!/^0\d{9}$/.test(String(contact_number).trim())) {
+            return res.status(400).json({ error: 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก' })
         }
 
         const db = await connectDB()
@@ -44,6 +48,7 @@ export default async function handler(req, res) {
         const result = await col.insertOne({
             title,
             category,
+            sub_category: sub_category || null,
             location_building,
             location_detail,
             description,

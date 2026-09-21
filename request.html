@@ -79,7 +79,8 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">เบอร์ติดต่อกลับ</label>
-                                    <input type="tel" class="form-control" id="contactNumber" placeholder="0xx-xxxxxxx">
+                                    <input type="tel" class="form-control" id="contactNumber" placeholder="0xx-xxxxxxx" inputmode="tel" pattern="0[0-9]{8,9}" maxlength="10" required>
+                                    <small class="text-muted">กรุณากรอกเบอร์โทรศัพท์ 10 หลัก</small>
                                 </div>
                             </div>
 
@@ -292,8 +293,10 @@
             const subCategory = document.getElementById('repairSubCategory').value
             const location_building = document.getElementById('locationBuilding').value
             const description = document.getElementById('repairDescription').value
+            const contactNumber = document.getElementById('contactNumber').value.trim()
 
             if (!category) { alert('❌ กรุณาเลือกประเภทงานซ่อม'); return }
+            if (!/^0[0-9]{9}$/.test(contactNumber)) { alert('❌ กรุณากรอกเบอร์โทรศัพท์ 10 หลัก'); document.getElementById('contactNumber').focus(); return }
             if (!location_building) { alert('❌ กรุณาเลือกอาคาร/สถานที่'); return }
             if (!description) { alert('❌ กรุณากรอกรายละเอียด'); return }
 
@@ -336,7 +339,7 @@
                         location_building,
                         location_detail: document.getElementById('locationDetail').value,
                         description,
-                        contact_number: document.getElementById('contactNumber').value,
+                        contact_number: contactNumber,
                         image_url
                     })
                 })

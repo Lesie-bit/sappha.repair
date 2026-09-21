@@ -75,6 +75,18 @@
         }
         .btn-navy:hover { background: var(--navy-mid); color: white; transform: translateY(-1px); }
         .btn-navy:disabled { background: #8899BB; color: white; transform: none; }
+        .demo-section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #E5ECF4; }
+        .demo-title { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #66768d; }
+        .demo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.8rem; }
+        .demo-btn {
+            border: 1px solid #D8E5F1; background: linear-gradient(180deg, #ffffff 0%, #F6FAFF 100%);
+            border-radius: 10px; padding: 0.7rem 0.45rem; color: var(--navy); font-weight: 600; transition: all 0.2s ease; box-shadow: 0 6px 14px rgba(27,58,107,0.05);
+        }
+        .demo-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(27,58,107,0.12); }
+        .demo-btn.reporter { border-color: #CDE1F5; }
+        .demo-btn.admin { border-color: #F3DFA2; background: linear-gradient(180deg, #fffdf5 0%, #fff7df 100%); }
+        .demo-btn.technician { border-color: #D7EEDF; background: linear-gradient(180deg, #f4fff7 0%, #ebf9ef 100%); }
+        .demo-btn small { display: block; font-size: 0.68rem; opacity: 0.8; margin-top: 0.15rem; }
         footer { background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.6); }
         a { color: var(--navy-light); }
     </style>
@@ -119,6 +131,24 @@
                         <small class="text-muted">ยังไม่มีบัญชี? <a href="register.html">สมัครสมาชิก</a></small>
                     </div>
                 </form>
+
+                <div class="demo-section">
+                    <div class="demo-title text-center">ดูตัวอย่างการใช้งาน</div>
+                    <div class="demo-grid">
+                        <button type="button" class="demo-btn reporter" data-demo-role="reporter">
+                            <span>คนแจ้ง</span>
+                            <small>แจ้งซ่อม</small>
+                        </button>
+                        <button type="button" class="demo-btn admin" data-demo-role="admin">
+                            <span>แอดมิน</span>
+                            <small>จัดการ</small>
+                        </button>
+                        <button type="button" class="demo-btn technician" data-demo-role="technician">
+                            <span>ช่าง</span>
+                            <small>ซ่อมได้</small>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -237,6 +267,54 @@
             const btn = document.getElementById('forgotSubmitBtn')
             btn.disabled = false
             btn.innerHTML = 'ส่ง OTP'
+        })
+
+        const demoUsers = {
+            reporter: {
+                id: 'demo-user',
+                name: 'นางสาวพรพิมล ใจดี',
+                email: 'demo.reporter@sappha.ac.th',
+                password: 'demo1234',
+                role: 'user',
+                department: 'ครูประจำชั้น'
+            },
+            admin: {
+                id: 'demo-admin',
+                name: 'นางสาววรรณา สมศรี',
+                email: 'demo.admin@sappha.ac.th',
+                password: 'admin1234',
+                role: 'admin',
+                department: 'ฝ่ายบริหาร'
+            },
+            technician: {
+                id: 'demo-technician',
+                name: 'นายกิตติศักดิ์ พรหมน้อย',
+                email: 'demo.technician@sappha.ac.th',
+                password: 'tech1234',
+                role: 'technician',
+                department: 'ช่างซ่อมบำรุง'
+            }
+        }
+
+        document.querySelectorAll('.demo-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const demoKey = button.dataset.demoRole
+                const demoUser = demoUsers[demoKey]
+                if (!demoUser) return
+
+                document.getElementById('email').value = demoUser.email
+                document.getElementById('password').value = demoUser.password
+                localStorage.setItem('token', `demo-token-${demoUser.role}`)
+                localStorage.setItem('user', JSON.stringify(demoUser))
+
+                const nextPage = demoUser.role === 'admin'
+                    ? '/admin.html'
+                    : demoUser.role === 'technician'
+                        ? '/technician.html'
+                        : '/index.html'
+
+                showAuthOverlay(`เข้าสู่ระบบด้วยบัญชีตัวอย่าง ${button.textContent.trim()}`, nextPage)
+            })
         })
 
         document.querySelector('form').addEventListener('submit', async function(e) {

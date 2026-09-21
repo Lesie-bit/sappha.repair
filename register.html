@@ -14,18 +14,29 @@
             font-family: 'Segoe UI', 'Sarabun', sans-serif;
         }
         .login-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
-        .login-card { width: 100%; max-width: 420px; border: none; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden; }
+        .login-card { width: 100%; max-width: 420px; border: none; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden; animation: cardEnter 0.7s ease-out both; }
         .login-header { background: var(--navy); color: white; text-align: center; padding: 2.5rem 1rem 2rem; border-bottom: 3px solid #C9922A; }
-        .school-emblem { width: 72px; height: 72px; background: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; border: 2px solid rgba(201,146,42,0.6); }
+        .school-emblem { width: 72px; height: 72px; background: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; border: 2px solid rgba(201,146,42,0.6); animation: emblemFloat 3s ease-in-out infinite; }
         .login-body { padding: 2rem; background: white; }
         .form-control:focus { border-color: var(--navy-light); box-shadow: 0 0 0 3px rgba(74,144,196,0.15); }
         .input-group-text { background: var(--navy-pale); border-color: #D1DCE8; color: var(--navy); }
+        .password-toggle { border-color: #D1DCE8; color: var(--navy); background: white; }
+        .password-toggle:hover { color: var(--navy-mid); background: var(--navy-pale); }
         .btn-navy { background: var(--navy); color: white; border: none; padding: 0.75rem; font-weight: 600; border-radius: 8px; transition: all 0.2s; }
         .btn-navy:hover { background: var(--navy-mid); color: white; transform: translateY(-1px); }
         .btn-navy:disabled { background: #8899BB; color: white; transform: none; }
+        .btn-loading { background: linear-gradient(90deg, var(--navy), var(--navy-light), var(--navy)); background-size: 200% 100%; animation: buttonShimmer 1.3s linear infinite; }
         #otpStep { display: none; }
+        #otpStep.show { display: block; animation: stepEnter 0.45s ease-out both; }
+        #otp { letter-spacing: 0.35em; }
+        .form-control.is-invalid { background-image: none; }
         footer { background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.6); }
         a { color: var(--navy-light); }
+        @keyframes cardEnter { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes emblemFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes buttonShimmer { to { background-position: -200% 0; } }
+        @keyframes stepEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
     </style>
 </head>
 <body>
@@ -44,8 +55,9 @@
                         <label class="form-label fw-semibold text-secondary small">ชื่อ-นามสกุล</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
-                            <input type="text" class="form-control" id="name" placeholder="กรอกชื่อ-นามสกุล" required>
+                            <input type="text" class="form-control" id="name" placeholder="เช่น นายสมชาย ใจดี" required>
                         </div>
+                        <small class="text-muted">กรุณาเขียนคำนำหน้า เช่น นาย, นางสาว, นาง หรือ ดร.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold text-secondary small">อีเมลโรงเรียน</label>
@@ -55,12 +67,22 @@
                         </div>
                         <small class="text-muted">ใช้ได้เฉพาะอีเมล @sappha.ac.th เท่านั้น</small>
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label class="form-label fw-semibold text-secondary small">รหัสผ่าน</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-                            <input type="password" class="form-control" id="password" placeholder="อย่างน้อย 6 ตัวอักษร" required>
+                            <input type="password" class="form-control" id="password" placeholder="อย่างน้อย 6 ตัวอักษร" minlength="6" required>
+                            <button class="btn password-toggle" type="button" data-target="password" aria-label="แสดงรหัสผ่าน"><i class="bi bi-eye"></i></button>
                         </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary small">ยืนยันรหัสผ่าน</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
+                            <input type="password" class="form-control" id="confirmPassword" placeholder="กรอกรหัสผ่านอีกครั้ง" minlength="6" required>
+                            <button class="btn password-toggle" type="button" data-target="confirmPassword" aria-label="แสดงรหัสผ่าน"><i class="bi bi-eye"></i></button>
+                        </div>
+                        <small class="text-danger d-none" id="passwordError">รหัสผ่านไม่ตรงกัน</small>
                     </div>
                     <div class="mb-4" id="otpStep">
                         <label class="form-label fw-semibold text-secondary small">รหัส OTP</label>
@@ -86,16 +108,46 @@
     <script>
         const form = document.querySelector('form')
         const otpStep = document.getElementById('otpStep')
+        const passwordInput = document.getElementById('password')
+        const confirmPasswordInput = document.getElementById('confirmPassword')
+        const passwordError = document.getElementById('passwordError')
         let otpSent = false
+
+        document.querySelectorAll('.password-toggle').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                const input = document.getElementById(toggle.dataset.target)
+                const icon = toggle.querySelector('i')
+                const isVisible = input.type === 'text'
+                input.type = isVisible ? 'password' : 'text'
+                icon.className = isVisible ? 'bi bi-eye' : 'bi bi-eye-slash'
+                toggle.setAttribute('aria-label', isVisible ? 'แสดงรหัสผ่าน' : 'ซ่อนรหัสผ่าน')
+            })
+        })
+
+        function validatePasswords() {
+            const mismatch = passwordInput.value !== confirmPasswordInput.value
+            const shouldShowError = confirmPasswordInput.value.length > 0 && mismatch
+            passwordError.classList.toggle('d-none', !shouldShowError)
+            confirmPasswordInput.classList.toggle('is-invalid', shouldShowError)
+            return !mismatch
+        }
+
+        passwordInput.addEventListener('input', validatePasswords)
+        confirmPasswordInput.addEventListener('input', validatePasswords)
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault()
             const name = document.getElementById('name').value.trim()
             const email = document.getElementById('email').value.trim().toLowerCase()
-            const password = document.getElementById('password').value
+            const password = passwordInput.value
             const otp = document.getElementById('otp').value.trim()
             const btn = document.getElementById('submitBtn')
+            if (!otpSent && !validatePasswords()) {
+                confirmPasswordInput.focus()
+                return
+            }
             btn.disabled = true
+            btn.classList.add('btn-loading')
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${otpSent ? 'กำลังยืนยัน...' : 'กำลังส่ง OTP...'}`
             try {
                 const endpoint = otpSent ? '/api/auth/verify-otp' : '/api/auth/register'
@@ -112,22 +164,26 @@
                         window.location.href = '/login.html'
                     } else {
                         otpSent = true
-                        otpStep.style.display = 'block'
+                        otpStep.classList.add('show')
                         document.getElementById('name').readOnly = true
                         document.getElementById('email').readOnly = true
                         document.getElementById('password').readOnly = true
+                        document.getElementById('confirmPassword').readOnly = true
                         document.getElementById('otp').focus()
                         btn.disabled = false
+                        btn.classList.remove('btn-loading')
                         btn.innerHTML = '<i class="bi bi-shield-check me-2"></i>ยืนยัน OTP'
                     }
                 } else {
                     alert(data.error)
                     btn.disabled = false
+                    btn.classList.remove('btn-loading')
                     btn.innerHTML = otpSent ? '<i class="bi bi-shield-check me-2"></i>ยืนยัน OTP' : '<i class="bi bi-person-check me-2"></i>สมัครสมาชิก'
                 }
             } catch {
                 alert('เกิดข้อผิดพลาด กรุณาลองใหม่')
                 btn.disabled = false
+                btn.classList.remove('btn-loading')
                 btn.innerHTML = otpSent ? '<i class="bi bi-shield-check me-2"></i>ยืนยัน OTP' : '<i class="bi bi-person-check me-2"></i>สมัครสมาชิก'
             }
         })
